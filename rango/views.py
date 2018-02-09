@@ -8,7 +8,37 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from rango.forms import CategoryForm
 from rango.forms import PageForm
+from rango.forms import UserForm, UserProfileForm
 
+def register(request):
+    registered = False
+    if request.method == 'POST':
+        user_form = UserForm(data=request.POST)
+        profile_form = UserProfileForm(data=request.POST)
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user = user_form.save()
+            user.set_password(user.password)
+            user.save()
+            profile = profile_form.save(commit=False)
+            profile.user = user
+            
+            if 'picture' in request.FILES:
+                profile.picture = request.FILES['picture']
+            profile.save()
+            registered = True
+        else:
+            print(user_form.errors, profile_form.errors)
+    else:
+        user_form = UserForm()
+        profile_form = UserProfileForm()
+
+    return render(request,
+                  'rango/register.html',
+                  {'user_form': profile_form,
+                   'profile_form': profile_form,
+                   'registered' : registered})
+        
 def index(request):
     category_list = Category.objects.order_by('-likes')[:5]
     page_list = Page.objects.order_by('-views')[:5]
@@ -17,9 +47,10 @@ def index(request):
     return render(request, 'rango/index.html',  context = context_dict)
              
 def about(request):
-    context_dict = {'boldmessage': 'This tutorial has been put together by Adam Christie'}
-    return render(request, 'rango/about.html', context=context_dict)
-
+    print(request.method)
+    print(request.user)
+    return render(request, 'rango/about.html', {})
+    
 def show_category(request, category_name_slug):
     context_dict = {}
     try:
